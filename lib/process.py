@@ -34,6 +34,9 @@ def process_chirps(var_name, year_range, lon_lim, lat_lim, version, region_name,
 
 # Load in the CHIRPS data for the given region and time period.
     for the_year in list(range(year_range[0], year_range[1]+1)):
+# CHIRPS data officially end in 2015; data for 2016 are incomplete.
+        if the_year > 2015:
+            break
         filename = f'chirps-v{version}.{the_year:4d}.days_p25.nc'
         try:
 # Load the CHIRPS data, one year at a time.
@@ -49,8 +52,6 @@ def process_chirps(var_name, year_range, lon_lim, lat_lim, version, region_name,
 # Calculate annual total rainfall
                 chirps_annual = chirps_daily.collapsed('time', iris.analysis.SUM)
                 clist.append(chirps_annual)
-                print(the_year)
-                print(chirps_annual.coord('time'))
             else:
 # Calculate seasonal total rainfall
                 all_months = 'jfmamjjasond'
@@ -69,12 +70,19 @@ def process_chirps(var_name, year_range, lon_lim, lat_lim, version, region_name,
             pass
 
 # Create a single cube containing a series of annual or seasonal totals on the native CHIRPS grid.
-    if season == 'annual':
-        chirps_series = clist.merge_cube()
-    else:
-        chirps_series = clist.concatenate_cube()
+    chirps_series = clist.merge_cube()
 
-# Calculate mean of annual or seasonal totals on the CHIRPS grid
+# Add bounds to the coordinates of the CHIRPS data, if not present.
+    if not chirps_series.coord('longitude').has_bounds():
+        chirps_series.coord('longitude').guess_bounds()
+    if not chirps_series.coord('latitude').has_bounds():
+        chirps_series.coord('latitude').guess_bounds()
+
+# Save the CHIRPS time series
+    filename = f'chirps_v{version}_{var_name}_{region_name}_{season}_series.nc'
+    iris.save(chirps_series, os.path.join(UDIR, filename))
+
+# Calculate average of annual or seasonal totals
     cube = chirps_series.collapsed('time', iris.analysis.MEAN)
 
 # Add bounds to the coordinates of the CHIRPS data, if not present.
@@ -83,6 +91,6 @@ def process_chirps(var_name, year_range, lon_lim, lat_lim, version, region_name,
     if not cube.coord('latitude').has_bounds():
         cube.coord('latitude').guess_bounds()
 
-# Save the CHIRPS data on the native grid
-    filename = f'chirps_v{version}_{var_name}_{region_name}_{season}.nc'
+# Save the averaged CHIRPS data
+    filename = f'chirps_v{version}_{var_name}_{region_name}_{season}_mean.nc'
     iris.save(cube, os.path.join(UDIR, filename))
