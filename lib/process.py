@@ -34,7 +34,7 @@ def process_chirps(var_name, year_range, lon_lim, lat_lim, version, region_name,
 
 # Load in the CHIRPS data for the given region and time period.
     for the_year in list(range(year_range[0], year_range[1]+1)):
-        filename = f'chirps-v{version}.{year:4d}.days_p25.nc'
+        filename = f'chirps-v{version}.{the_year:4d}.days_p25.nc'
         try:
 # Load the CHIRPS data, one year at a time.
             chirps_daily = iris.load_cube(os.path.join(indir, filename), all_con)
@@ -49,6 +49,8 @@ def process_chirps(var_name, year_range, lon_lim, lat_lim, version, region_name,
 # Calculate annual total rainfall
                 chirps_annual = chirps_daily.collapsed('time', iris.analysis.SUM)
                 clist.append(chirps_annual)
+                print(the_year)
+                print(chirps_annual.coord('time'))
             else:
 # Calculate seasonal total rainfall
                 all_months = 'jfmamjjasond'
@@ -62,11 +64,15 @@ def process_chirps(var_name, year_range, lon_lim, lat_lim, version, region_name,
                 iris.coord_categorisation.add_season(chirps_daily, 'time', name='season', seasons=vine_seasons)
                 chirps_season = chirps_daily.aggregated_by(['season', 'year'], iris.analysis.SUM).extract(iris.Constraint(season = season))
                 clist.append(chirps_season)
+            
         except:
             pass
 
 # Create a single cube containing a series of annual or seasonal totals on the native CHIRPS grid.
-    chirps_series = clist.concatenate_cube()
+    if season == 'annual':
+        chirps_series = clist.merge_cube()
+    else:
+        chirps_series = clist.concatenate_cube()
 
 # Calculate mean of annual or seasonal totals on the CHIRPS grid
     cube = chirps_series.collapsed('time', iris.analysis.MEAN)
@@ -77,13 +83,6 @@ def process_chirps(var_name, year_range, lon_lim, lat_lim, version, region_name,
     if not cube.coord('latitude').has_bounds():
         cube.coord('latitude').guess_bounds()
 
-# Assign a coordinate system to the CHIRPS data (set to None in the files). Regridding
-# fails if the coordinate system is not specified.
-    if cube.coord('longitude').coord_system is None:
-        cube.coord('longitude').coord_system = dp3_cube.coord('longitude').coord_system
-        cube.coord('latitude').coord_system = dp3_cube.coord('latitude').coord_system
-
 # Save the CHIRPS data on the native grid
-    filename = f'chirps_v{version}_{var_name}_{region}_{season}.nc'
+    filename = f'chirps_v{version}_{var_name}_{region_name}_{season}.nc'
     iris.save(cube, os.path.join(UDIR, filename))
-
