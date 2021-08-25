@@ -6,10 +6,10 @@ def make_filename(path, dataset_name, version, season):
 
     if dataset_name == 'DePreSys':
         fend = 'ensmean'
+        filename = f'{dataset_name}{version}_pr_iberia_{season}_{fend}.nc'
     else:
         fend = 'mean'
-
-    filename = f'{dataset_name}_v{version}_pr_iberia_{season}_{fend}.nc'
+        filename = f'{dataset_name}_v{version}_pr_iberia_{season}_{fend}.nc'
 
     return os.path.join(path, filename)
 
@@ -18,15 +18,17 @@ def regrid_datasets(datadir, datasets, season_names, region):
 
     dout = '/data/users/hadmi/MED-GOLD/UNSEEN/agg_to_dp3'
 
+    for season in season_names:
+        print(season)
 # Load in the DePreSys data
-    dataset_name = 'DePreSys'
-    version = datasets[dataset_name]
-    filename = make_filename(datadir, dataset_name, version, season)
-    dp3_cube = iris.load_cube(filename)
-
-    for dataset_name in datasets:
+        dataset_name = 'DePreSys'
         version = datasets[dataset_name]
-        for season in season_names:
+        filename = make_filename(datadir, dataset_name, version, season)
+        dp3_cube = iris.load_cube(filename)
+
+        for dataset_name in datasets:
+            print(dataset_name)
+            version = datasets[dataset_name]
             filename = make_filename(datadir, dataset_name, version, season)
             data_cube = iris.load_cube(filename)
 
@@ -48,7 +50,7 @@ def main():
 
     region = 'iberia'
     season_names = ['annual', 'amj', 'aso']
-    datasets = {'chirps': '2.0', 'iberia01': '1.0', 'eobs': '21'}
+    datasets = {'DePreSys': '3', 'chirps': '2.0', 'iberia01': '1.0', 'eobs': '21'}
 
     regrid_datasets(datadir, datasets, season_names, region)
 
