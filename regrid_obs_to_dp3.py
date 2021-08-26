@@ -28,17 +28,20 @@ def regrid_datasets(datadir, datasets, season_names, region):
 
         for dataset_name in datasets:
             print(dataset_name)
-            version = datasets[dataset_name]
-            filename = make_filename(datadir, dataset_name, version, season)
-            data_cube = iris.load_cube(filename)
+            if dataset_name == 'DePreSys':
+                data_dp3 = dp3_cube.copy()
+            else:
+                version = datasets[dataset_name]
+                filename = make_filename(datadir, dataset_name, version, season)
+                data_cube = iris.load_cube(filename)
 
 # Assign a coordinate system to the CHIRPS data (set to None in the files). Regridding
 # fails if coordinate system not specified.
-            data_cube.coord('longitude').coord_system = dp3_cube.coord('longitude').coord_system
-            data_cube.coord('latitude').coord_system = dp3_cube.coord('latitude').coord_system
+                data_cube.coord('longitude').coord_system = dp3_cube.coord('longitude').coord_system
+                data_cube.coord('latitude').coord_system = dp3_cube.coord('latitude').coord_system
 
 # Regrid the averaged rainfall totals to the coarser DePreSys grid.
-            data_dp3 = data_cube.regrid(dp3_cube, iris.analysis.AreaWeighted())
+                data_dp3 = data_cube.regrid(dp3_cube, iris.analysis.AreaWeighted(mdtol=1))
 
             ofilename = make_filename(dout, dataset_name, version, season)
             iris.save(data_dp3, ofilename)
